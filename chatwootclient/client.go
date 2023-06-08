@@ -1,4 +1,4 @@
-package chatwootgolangclient
+package chatwootclient
 
 import (
 	"bytes"
