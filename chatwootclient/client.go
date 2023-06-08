@@ -107,9 +107,9 @@ func (client *ChatwootClient) CreateContact(createContactRequest CreateContactRe
 
 type CreateNewConversationRequest struct {
 	SourceID  string `json:"source_id"`
-	InboxID   string `json:"inbox_id"`
-	ContactID string `json:"contact_id"`
-	Status    string `json:"status"`
+	InboxID   int    `json:"inbox_id"`
+	ContactID string `json:"contact_id,omitempty"`
+	Status    string `json:"status,omitempty"`
 }
 
 type CreateNewConversationResponse struct {
@@ -118,18 +118,11 @@ type CreateNewConversationResponse struct {
 	InboxId   int `json:"inbox_id"`
 }
 
-func (client *ChatwootClient) CreateNewConversation(sourceId string, inboxId string, contactId string, status string) (CreateNewConversationResponse, error) {
+func (client *ChatwootClient) CreateNewConversation(createNewConversationRequest CreateNewConversationRequest) (CreateNewConversationResponse, error) {
 
 	url := fmt.Sprintf("%s/api/v1/accounts/%v/conversations", client.BaseUrl, client.AccountId)
 
-	requestBody := CreateNewConversationRequest{
-		SourceID:  sourceId,
-		InboxID:   inboxId,
-		ContactID: contactId,
-		Status:    status,
-	}
-
-	requestJSON, err := json.Marshal(requestBody)
+	requestJSON, err := json.Marshal(createNewConversationRequest)
 
 	if err != nil {
 		return CreateNewConversationResponse{}, err
@@ -150,47 +143,8 @@ func (client *ChatwootClient) CreateNewConversation(sourceId string, inboxId str
 		return CreateNewConversationResponse{}, err
 	}
 
-	body, err := io.ReadAll(response.Body)
-
-	if err != nil {
-		return CreateNewConversationResponse{}, err
-	}
-
-	var createNewConversationResponse CreateNewConversationResponse
-
-	if err := json.Unmarshal(body, &createNewConversationResponse); err != nil {
-		return CreateNewConversationResponse{}, err
-	}
-
-	return createNewConversationResponse, nil
-
-}
-
-func (client *ChatwootClient) CreateNewConversationWithSourceIdAndInboxId(source_id string, inbox_id string) (CreateNewConversationResponse, error) {
-
-	url := fmt.Sprintf("%s/api/v1/accounts/%v/conversations", client.BaseUrl, client.AccountId)
-
-	requestBody := fmt.Sprintf(`{"source_id": "%s", "inbox_id": "%s"}`, source_id, inbox_id)
-
-	requestJSON, err := json.Marshal(requestBody)
-
-	if err != nil {
-		return CreateNewConversationResponse{}, err
-	}
-
-	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestJSON))
-
-	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	request.Header.Add("api_access_token", client.AgentBotToken)
-
-	if err != nil {
-		return CreateNewConversationResponse{}, err
-	}
-
-	response, err := http.DefaultClient.Do(request)
-
-	if err != nil {
-		return CreateNewConversationResponse{}, err
+	if response.StatusCode != 200 {
+		return CreateNewConversationResponse{}, errors.New("Request failed" + response.Status)
 	}
 
 	body, err := io.ReadAll(response.Body)
@@ -236,6 +190,10 @@ func (client *ChatwootClient) GetMessages(conversationId string) (ChatwootMessag
 		return nil, err
 	}
 
+	if response.StatusCode != 200 {
+		return nil, errors.New("Request failed" + response.Status)
+	}
+
 	responseBody, err := io.ReadAll(response.Body)
 
 	if err != nil {
@@ -262,7 +220,7 @@ type CreateNewMessageRequest struct {
 type CreateNewMessageResponse struct {
 	ID          int    `json:"id"`
 	Content     string `json:"content"`
-	MessageType string `json:"message_type"`
+	MessageType int    `json:"message_type"` // Chatwoot 2.17.1 returns integers as message type in contrast to the API documentation
 	Private     bool   `json:"private"`
 }
 
@@ -293,6 +251,10 @@ func (client *ChatwootClient) CreateNewMessage(conversationId int, createMessage
 
 	if err != nil {
 		return CreateNewMessageResponse{}, err
+	}
+
+	if response.StatusCode != 200 {
+		return CreateNewMessageResponse{}, errors.New("Request failed" + response.Status)
 	}
 
 	body, err := io.ReadAll(response.Body)
@@ -378,7 +340,11 @@ func (client *ChatwootClient) AddLabels(conversationId int, labels []string) err
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Add("api_access_token", client.AgentToken)
 
-	_, err = http.DefaultClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
+
+	if response.StatusCode != 200 {
+		return errors.New("Request failed" + response.Status)
+	}
 
 	return err
 
@@ -407,7 +373,11 @@ func (client *ChatwootClient) AddLabel(conversationId int, label string) error {
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Add("api_access_token", client.AgentToken)
 
-	_, err = http.DefaultClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
+
+	if response.StatusCode != 200 {
+		return errors.New("Request failed" + response.Status)
+	}
 
 	return err
 
@@ -430,7 +400,11 @@ func (client *ChatwootClient) Assign(conversationId int, assignee_id int) error 
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Add("api_access_token", client.AgentToken)
 
-	_, err := http.DefaultClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
+
+	if response.StatusCode != 200 {
+		return errors.New("Request failed" + response.Status)
+	}
 
 	return err
 
@@ -453,7 +427,11 @@ func (client *ChatwootClient) AssignTeam(conversationId int, team_id int) error 
 	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
 	request.Header.Add("api_access_token", client.AgentToken)
 
-	_, err := http.DefaultClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
+
+	if response.StatusCode != 200 {
+		return errors.New("Request failed" + response.Status)
+	}
 
 	return err
 
