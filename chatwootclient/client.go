@@ -36,6 +36,75 @@ func NewChatwootClientWithAgentToken(baseUrl string, accountId int, agentBotToke
 	}
 }
 
+type CreateContactRequest struct {
+	InboxID          int         `json:"inbox_id"`
+	Name             string      `json:"name,omitempty"`
+	EMail            string      `json:"email,omitempty"`
+	PhoneNumber      string      `json:"phone_number,omitempty"`
+	Avatar           string      `json:"avatar,omitempty"`
+	AvatarUrl        string      `json:"avatar_url,omitempty"`
+	Identifier       string      `json:"identifier,omitempty"`
+	CustomAttributes interface{} `json:"custom_attributes,omitempty"`
+}
+
+type CreateContactResponse struct {
+	Payload Payload `json:"payload"`
+}
+
+type Payload struct {
+	Contact Contact `json:"contact"`
+}
+
+type Contact struct {
+	ID             int            `json:"id"`
+	ContactInboxes []ContactInbox `json:"contact_inboxes"`
+}
+
+type ContactInbox struct {
+	SourceID string `json:"source_id"`
+}
+
+func (client *ChatwootClient) CreateContact(createContactRequest CreateContactRequest) (CreateContactResponse, error) {
+
+	url := fmt.Sprintf("%s/api/v1/accounts/%v/contacts", client.BaseUrl, client.AccountId)
+
+	requestJSON, err := json.Marshal(createContactRequest)
+
+	if err != nil {
+		return CreateContactResponse{}, err
+	}
+
+	request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(requestJSON))
+
+	request.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	request.Header.Add("api_access_token", client.AgentToken)
+
+	if err != nil {
+		return CreateContactResponse{}, err
+	}
+
+	response, err := http.DefaultClient.Do(request)
+
+	if err != nil {
+		return CreateContactResponse{}, err
+	}
+
+	body, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return CreateContactResponse{}, err
+	}
+
+	var createContactResponse CreateContactResponse
+
+	if err := json.Unmarshal(body, &createContactResponse); err != nil {
+		return CreateContactResponse{}, err
+	}
+
+	return createContactResponse, nil
+
+}
+
 type CreateNewConversationRequest struct {
 	SourceID  string `json:"source_id"`
 	InboxID   string `json:"inbox_id"`
@@ -141,16 +210,16 @@ func (client *ChatwootClient) CreateNewConversationWithSourceIdAndInboxId(source
 }
 
 type GetMessagesResponse struct {
-	Meta    interface{}
-	Payload ChatwootMessages
+	Meta    interface{}      `json:"meta"`
+	Payload ChatwootMessages `json:"payload"`
 }
 
 type ChatwootMessages []struct {
-	Id          int
-	Content     string
-	ContentType string `json:"content_type"`
-	Private     bool
-	sender      interface{}
+	Id          int         `json:"id"`
+	Content     string      `json:"content"`
+	ContentType string      `json:"content_type,omitempty"`
+	Private     bool        `json:"private,omitempty"`
+	Sender      interface{} `json:"sender,omitempty"`
 }
 
 func (client *ChatwootClient) GetMessages(conversationId string) (ChatwootMessages, error) {
